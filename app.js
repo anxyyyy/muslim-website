@@ -577,25 +577,42 @@
 
   function rotateNeedle() {
     const needle = document.getElementById('compass-needle-element');
-    const rotation = state.qiblaAngle;
+    // Стрелка ВНЕ диска — вращается самостоятельно
+    // qiblaAngle = азимут Киблы от севера (например 244°)
+    // deviceHeading = куда смотрит телефон от севера (0-360)
+    // Разница = на сколько градусов Кибла правее/левее от текущего направления телефона
+    const rotation = state.qiblaAngle - state.deviceHeading;
     if (needle) {
       needle.style.transform = `rotate(${rotation}deg)`;
+    }
+    // Отладка — показать значения на экране
+    const debugEl = document.getElementById('compass-debug');
+    if (debugEl) {
+      debugEl.textContent = `Азимут Киблы: ${state.qiblaAngle}° | Телефон: ${state.deviceHeading}° | Стрелка: ${Math.round(rotation)}°`;
     }
   }
 
   function handleOrientation(event) {
-    if (!state.useSensors) return;
     let heading = null;
 
     if (event.webkitCompassHeading !== undefined) {
+      // iOS — webkitCompassHeading уже даёт градусы от магнитного севера
       heading = event.webkitCompassHeading;
     } else if (event.alpha !== null) {
-      heading = (360 - event.alpha) % 360;
+      // Android — alpha это угол вращения вокруг оси Z
+      // Для абсолютного события alpha = азимут
+      if (event.absolute) {
+        heading = (360 - event.alpha) % 360;
+      } else {
+        // Относительный — тоже используем, лучше чем ничего
+        heading = (360 - event.alpha) % 360;
+      }
     }
 
     if (heading !== null) {
       state.deviceHeading = Math.round(heading);
       
+      // Вращаем диск (буквы С, В, Ю, З) чтобы "С" всегда смотрел на реальный север
       const dial = document.getElementById('compass-dial-element');
       if (dial) {
         dial.style.transform = `rotate(${-state.deviceHeading}deg)`;
@@ -1208,28 +1225,42 @@
   }
 
   function initCompassDrag() {
-    const dial = document.getElementById('compass-dial-element');
-    if (!dial) return;
+    const container = document.getElementById('compass-dial-element');
+    if (!container) return;
+
+    // Drag доступен только если нет датчиков (на десктопе)
+    // На телефоне датчики управляют компасом напрямую
+    let hasSensors = false;
+    
+    function testSensor(e) {
+      if (e.alpha !== null || e.webkitCompassHeading !== undefined) {
+        hasSensors = true;
+        // Удаляем тестовый обработчик
+        window.removeEventListener('deviceorientation', testSensor);
+        window.removeEventListener('deviceorientationabsolute', testSensor);
+      }
+    }
+    window.addEventListener('deviceorientation', testSensor);
+    window.addEventListener('deviceorientationabsolute', testSensor);
 
     let isDragging = false;
     let startAngle = 0;
-    let currentRotation = -state.deviceHeading;
+    let currentRotation = 0;
 
     function getAngle(clientX, clientY) {
-      const rect = dial.getBoundingClientRect();
+      const rect = container.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       return Math.atan2(clientY - centerY, clientX - centerX) * 180 / Math.PI;
     }
 
     function onStart(e) {
+      if (hasSensors) return; // Не мешаем датчикам на телефоне
       isDragging = true;
-      state.useSensors = false;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const clickAngle = getAngle(clientX, clientY);
-      startAngle = clickAngle - currentRotation;
-      dial.style.cursor = 'grabbing';
+      startAngle = getAngle(clientX, clientY) - currentRotation;
+      container.style.cursor = 'grabbing';
     }
 
     function onMove(e) {
@@ -1238,32 +1269,31 @@
       
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const moveAngle = getAngle(clientX, clientY);
-      currentRotation = moveAngle - startAngle;
+      currentRotation = getAngle(clientX, clientY) - startAngle;
       
-      currentRotation = (currentRotation + 360) % 360;
-      state.deviceHeading = Math.round((360 - currentRotation) % 360);
+      // Симулируем heading из вращения
+      state.deviceHeading = Math.round(((360 - currentRotation) % 360 + 360) % 360);
 
-      dial.style.transform = `rotate(${currentRotation}deg)`;
+      container.style.transform = `rotate(${-state.deviceHeading}deg)`;
       rotateNeedle();
     }
 
     function onEnd() {
       isDragging = false;
-      dial.style.cursor = 'grab';
+      container.style.cursor = 'grab';
     }
 
-    dial.style.cursor = 'grab';
+    container.style.cursor = 'grab';
     
-    // Mouse Events
-    dial.addEventListener('mousedown', onStart);
+    // Mouse Events (для десктопа)
+    container.addEventListener('mousedown', onStart);
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onEnd);
 
-    // Touch Events
-    dial.addEventListener('touchstart', onStart, { passive: true });
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd);
+    // Touch Events (только если нет датчиков)
+    container.addEventListener('touchstart', (e) => { if (!hasSensors) onStart(e); }, { passive: true });
+    document.addEventListener('touchmove', (e) => { if (!hasSensors) onMove(e); }, { passive: false });
+    document.addEventListener('touchend', (e) => { if (!hasSensors) onEnd(); });
   }
 
 })();

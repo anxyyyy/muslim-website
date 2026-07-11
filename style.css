@@ -656,6 +656,10 @@ body.theme-dark .metric-val {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+  width: 320px;
+  height: 320px;
+  margin: 0 auto;
 }
 
 .compass-dial {
@@ -714,7 +718,9 @@ body.theme-dark .compass-dial {
   left: calc(50% - 3px);
   transform-origin: center center;
   transform: rotate(0deg); /* Updated by Javascript */
-  transition: transform 0.5s ease-out;
+  transition: transform 0.15s ease-out;
+  z-index: 10;
+  pointer-events: none;
 }
 
 .compass-needle::before {
