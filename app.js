@@ -136,8 +136,15 @@
       enableCompassBtn.style.display = 'inline-flex';
       enableCompassBtn.addEventListener('click', requestCompassPermission);
     } else {
-      window.addEventListener('deviceorientation', handleOrientation, true);
+      if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+      }
     }
+    
+    // Инициализация перетаскивания компаса (для десктопа/ручного теста)
+    initCompassDrag();
 
     // Изменение города (Модальное окно)
     document.getElementById('change-city-btn').addEventListener('click', () => openModal('city-modal'));
@@ -567,7 +574,7 @@
 
   function rotateNeedle() {
     const needle = document.getElementById('compass-needle-element');
-    const rotation = state.qiblaAngle - state.deviceHeading;
+    const rotation = state.qiblaAngle + state.deviceHeading;
     if (needle) {
       needle.style.transform = `rotate(${rotation}deg)`;
     }
@@ -1194,6 +1201,64 @@
     // Состояние кнопок навигации
     btnPrev.disabled = state.learnStepIndex === 0;
     btnNext.disabled = state.learnStepIndex === steps.length - 1;
+  }
+
+  function initCompassDrag() {
+    const dial = document.getElementById('compass-dial-element');
+    if (!dial) return;
+
+    let isDragging = false;
+    let startAngle = 0;
+    let currentRotation = -state.deviceHeading;
+
+    function getAngle(clientX, clientY) {
+      const rect = dial.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      return Math.atan2(clientY - centerY, clientX - centerX) * 180 / Math.PI;
+    }
+
+    function onStart(e) {
+      isDragging = true;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const clickAngle = getAngle(clientX, clientY);
+      startAngle = clickAngle - currentRotation;
+      dial.style.cursor = 'grabbing';
+    }
+
+    function onMove(e) {
+      if (!isDragging) return;
+      if (e.cancelable) e.preventDefault();
+      
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const moveAngle = getAngle(clientX, clientY);
+      currentRotation = moveAngle - startAngle;
+      
+      currentRotation = (currentRotation + 360) % 360;
+      state.deviceHeading = Math.round((360 - currentRotation) % 360);
+
+      dial.style.transform = `rotate(${currentRotation}deg)`;
+      rotateNeedle();
+    }
+
+    function onEnd() {
+      isDragging = false;
+      dial.style.cursor = 'grab';
+    }
+
+    dial.style.cursor = 'grab';
+    
+    // Mouse Events
+    dial.addEventListener('mousedown', onStart);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+
+    // Touch Events
+    dial.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
   }
 
 })();
