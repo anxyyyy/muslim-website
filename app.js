@@ -583,10 +583,10 @@
   function handleOrientation(event) {
     let heading = null;
 
-    if (event.webkitCompassHeading) {
+    if (event.webkitCompassHeading !== undefined) {
       heading = event.webkitCompassHeading;
-    } else if (event.absolute && event.alpha !== null) {
-      heading = 360 - event.alpha;
+    } else if (event.alpha !== null) {
+      heading = (360 - event.alpha) % 360;
     }
 
     if (heading !== null) {
@@ -605,7 +605,7 @@
       try {
         const permissionState = await DeviceOrientationEvent.requestPermission();
         if (permissionState === 'granted') {
-          window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+          window.addEventListener('deviceorientation', handleOrientation, true);
           document.getElementById('enable-compass-btn').style.display = 'none';
         } else {
           alert('Доступ к датчикам отклонен. Используйте карту для определения направления.');
