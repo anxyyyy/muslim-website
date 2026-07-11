@@ -574,7 +574,7 @@
 
   function rotateNeedle() {
     const needle = document.getElementById('compass-needle-element');
-    const rotation = state.qiblaAngle + state.deviceHeading;
+    const rotation = state.qiblaAngle;
     if (needle) {
       needle.style.transform = `rotate(${rotation}deg)`;
     }
