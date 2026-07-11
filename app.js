@@ -50,7 +50,10 @@
     // Обучение
     learnMode: 'namaz',
     learnGender: 'male',
-    learnStepIndex: 0
+    learnStepIndex: 0,
+
+    // Сенсоры
+    useSensors: true
   };
 
   const MECCA_COORDS = { lat: 21.4225, lng: 39.8262 };
@@ -581,6 +584,7 @@
   }
 
   function handleOrientation(event) {
+    if (!state.useSensors) return;
     let heading = null;
 
     if (event.webkitCompassHeading !== undefined) {
@@ -1220,6 +1224,7 @@
 
     function onStart(e) {
       isDragging = true;
+      state.useSensors = false;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       const clickAngle = getAngle(clientX, clientY);
