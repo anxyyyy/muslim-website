@@ -133,18 +133,8 @@
       document.getElementById('qibla-section').scrollIntoView({ behavior: 'smooth' });
     });
     
-    // Кнопка разрешения датчиков гироскопа
-    const enableCompassBtn = document.getElementById('enable-compass-btn');
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      enableCompassBtn.style.display = 'inline-flex';
-      enableCompassBtn.addEventListener('click', requestCompassPermission);
-    } else {
-      if ('ondeviceorientationabsolute' in window) {
-        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-      } else {
-        window.addEventListener('deviceorientation', handleOrientation, true);
-      }
-    }
+    // Кнопка запуска компаса — единая для ВСЕХ устройств
+    document.getElementById('start-compass-btn').addEventListener('click', startCompass);
     
     // Инициализация перетаскивания компаса (для десктопа/ручного теста)
     initCompassDrag();
@@ -575,66 +565,131 @@
     rotateNeedle();
   }
 
-  function rotateNeedle() {
-    const needle = document.getElementById('compass-needle-element');
-    // Стрелка ВНЕ диска — вращается самостоятельно
-    // qiblaAngle = азимут Киблы от севера (например 244°)
-    // deviceHeading = куда смотрит телефон от севера (0-360)
-    // Разница = на сколько градусов Кибла правее/левее от текущего направления телефона
-    const rotation = state.qiblaAngle - state.deviceHeading;
-    if (needle) {
-      needle.style.transform = `rotate(${rotation}deg)`;
+  function updateCompassVisuals() {
+    // Вращаем диск — "С" всегда смотрит на реальный Север
+    const dial = document.getElementById('compass-dial-element');
+    if (dial) {
+      dial.style.transform = `rotate(${-state.deviceHeading}deg)`;
     }
-    // Отладка — показать значения на экране
-    const debugEl = document.getElementById('compass-debug');
-    if (debugEl) {
-      debugEl.textContent = `Азимут Киблы: ${state.qiblaAngle}° | Телефон: ${state.deviceHeading}° | Стрелка: ${Math.round(rotation)}°`;
+    // Вращаем стрелку (она ВНЕ диска) — показывает Киблу
+    const needle = document.getElementById('compass-needle-element');
+    if (needle) {
+      const needleAngle = state.qiblaAngle - state.deviceHeading;
+      needle.style.transform = `rotate(${needleAngle}deg)`;
     }
   }
+
+  // Для отладки — считаем сколько раз сработал датчик
+  let compassEventCount = 0;
+  let compassEventType = 'нет';
 
   function handleOrientation(event) {
     let heading = null;
 
-    if (event.webkitCompassHeading !== undefined) {
-      // iOS — webkitCompassHeading уже даёт градусы от магнитного севера
+    if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+      // iOS Safari — даёт градусы от магнитного Севера напрямую
       heading = event.webkitCompassHeading;
-    } else if (event.alpha !== null) {
-      // Android — alpha это угол вращения вокруг оси Z
-      // Для абсолютного события alpha = азимут
-      if (event.absolute) {
-        heading = (360 - event.alpha) % 360;
-      } else {
-        // Относительный — тоже используем, лучше чем ничего
-        heading = (360 - event.alpha) % 360;
-      }
+      compassEventType = 'iOS webkit';
+    } else if (event.alpha !== null && event.alpha !== undefined) {
+      // Android / другие — alpha = угол от оси Z
+      // alpha=0 → верх телефона на Север; alpha растёт ПРОТИВ часовой
+      // heading (по часовой от Севера) = (360 - alpha) % 360
+      heading = (360 - event.alpha) % 360;
+      compassEventType = event.absolute ? 'absolute' : 'relative';
     }
 
-    if (heading !== null) {
-      state.deviceHeading = Math.round(heading);
-      
-      // Вращаем диск (буквы С, В, Ю, З) чтобы "С" всегда смотрел на реальный север
-      const dial = document.getElementById('compass-dial-element');
-      if (dial) {
-        dial.style.transform = `rotate(${-state.deviceHeading}deg)`;
+    if (heading !== null && !isNaN(heading)) {
+      state.deviceHeading = heading;
+      compassEventCount++;
+      updateCompassVisuals();
+
+      // Обновляем отладку на экране
+      const debugEl = document.getElementById('compass-debug');
+      if (debugEl) {
+        debugEl.innerHTML = 
+          `<b>Компас работает ✓</b><br>` +
+          `Тип: ${compassEventType} | Телефон: ${Math.round(heading)}° | ` +
+          `Кибла: ${state.qiblaAngle}° | Обновлений: ${compassEventCount}`;
       }
-      rotateNeedle();
     }
   }
 
-  async function requestCompassPermission() {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+  // Алиас для обратной совместимости
+  function rotateNeedle() {
+    updateCompassVisuals();
+  }
+
+  async function startCompass() {
+    const debugEl = document.getElementById('compass-debug');
+    const btn = document.getElementById('start-compass-btn');
+
+    debugEl.textContent = 'Запуск датчиков...';
+
+    // 1) iOS Safari — нужен requestPermission
+    if (typeof DeviceOrientationEvent !== 'undefined' && 
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
       try {
-        const permissionState = await DeviceOrientationEvent.requestPermission();
-        if (permissionState === 'granted') {
+        const perm = await DeviceOrientationEvent.requestPermission();
+        if (perm === 'granted') {
           window.addEventListener('deviceorientation', handleOrientation, true);
-          document.getElementById('enable-compass-btn').style.display = 'none';
+          btn.textContent = '✓ Компас включён';
+          btn.disabled = true;
+          debugEl.textContent = 'iOS: Датчики включены. Поверните телефон.';
         } else {
-          alert('Доступ к датчикам отклонен. Используйте карту для определения направления.');
+          debugEl.textContent = '❌ Разрешение на датчики отклонено';
         }
-      } catch (error) {
-        console.error('Ошибка запроса датчиков:', error);
+      } catch (err) {
+        debugEl.textContent = '❌ Ошибка: ' + err.message;
+      }
+      return;
+    }
+
+    // 2) Android / Desktop — пробуем deviceorientationabsolute (лучше) затем deviceorientation
+    let gotData = false;
+
+    function onAbsolute(e) {
+      if (e.alpha !== null) {
+        gotData = true;
+        // Абсолютный датчик работает — используем его
+        window.removeEventListener('deviceorientation', onFallback, true);
+        handleOrientation(e);
+        // Переключаемся на постоянный обработчик
+        window.removeEventListener('deviceorientationabsolute', onAbsolute, true);
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+        btn.textContent = '✓ Компас включён';
+        btn.disabled = true;
       }
     }
+
+    function onFallback(e) {
+      if (e.alpha !== null && !gotData) {
+        gotData = true;
+        // Абсолютного нет — используем обычный
+        window.removeEventListener('deviceorientationabsolute', onAbsolute, true);
+        handleOrientation(e);
+        window.removeEventListener('deviceorientation', onFallback, true);
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        btn.textContent = '✓ Компас включён';
+        btn.disabled = true;
+      }
+    }
+
+    // Подписываемся на оба
+    if ('ondeviceorientationabsolute' in window) {
+      window.addEventListener('deviceorientationabsolute', onAbsolute, true);
+    }
+    window.addEventListener('deviceorientation', onFallback, true);
+
+    // Через 3 секунды проверяем — получили ли мы данные
+    setTimeout(() => {
+      if (!gotData) {
+        debugEl.innerHTML = '⚠️ Датчики не отвечают.<br>Попробуйте повернуть телефон или используйте карту ниже.';
+        window.removeEventListener('deviceorientationabsolute', onAbsolute, true);
+        window.removeEventListener('deviceorientation', onFallback, true);
+        btn.textContent = '🔄 Попробовать снова';
+        btn.disabled = false;
+      }
+    }, 3000);
   }
 
   /* ----------------------------------------------------

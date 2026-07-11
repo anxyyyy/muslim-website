@@ -246,10 +246,6 @@
           </div>
         </div>
         
-        <!-- Button to request permission for sensors on iOS -->
-        <button class="btn btn-primary" id="enable-compass-btn" style="margin-top: 30px; display: none;">
-          Калибровать компас (разрешить датчики)
-        </button>
       </div>
       
       <!-- Right side compass visual -->
@@ -268,7 +264,13 @@
           <!-- Needle is OUTSIDE the dial so it rotates independently -->
           <div class="compass-needle" id="compass-needle-element"></div>
         </div>
-        <div id="compass-debug" style="margin-top: 12px; font-size: 13px; color: var(--color-gold); text-align: center; opacity: 0.8;"></div>
+        <!-- Кнопка запуска компаса — видна на ВСЕХ мобильных -->
+        <button class="btn btn-primary" id="start-compass-btn" style="margin-top: 20px; width: 100%;">
+          📱 Включить компас
+        </button>
+        <div id="compass-debug" style="margin-top: 12px; font-size: 13px; color: var(--color-gold); text-align: center; opacity: 0.9; min-height: 40px;">
+          Нажмите «Включить компас» и поверните телефон
+        </div>
       </div>
     </div>
     
