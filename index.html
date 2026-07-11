@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мазхаб — Время намаза, Кибла и Коран</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Информационный мусульманский портал Мазхаб. Точное время намаза по геолокации, интерактивный компас Киблы и чтение Корана с переводом Эльмира Кулиева и аудио-чтением.">
+  <meta name="keywords" content="коран, время намаза, кибла компас, мекка, время молитвы, коран перевод кулиева, слушать коран">
+  <meta name="author" content="Mazhab Project">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet.js CSS for Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-light">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-container">
+      <a href="#" class="logo" id="logo-link">
+        <span class="logo-icon">✨</span>
+        <span class="logo-text">Мазхаб.</span>
+      </a>
+      
+      <nav class="nav">
+        <a href="#prayer-section" class="nav-link">Время намаза</a>
+        <a href="#qibla-section" class="nav-link">Кибла</a>
+        <a href="#quran-section" class="nav-link">Коран</a>
+        <a href="#learning-section" class="nav-link">Обучение</a>
+        <a href="#tools-section" class="nav-link">Инструменты</a>
+      </nav>
+      
+      <button class="btn btn-primary" id="open-app-btn">Открыть приложение →</button>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="hero-section">
+    <div class="hero-bg-gradient"></div>
+    <div class="container hero-container">
+      <!-- Date & Location Banner -->
+      <div class="hero-meta" id="hero-meta-data">
+        <span class="meta-location-icon">✦</span>
+        <span id="hero-city">Определение геопозиции...</span>
+        <span class="meta-separator">·</span>
+        <span id="hero-gregorian-date">-- июля 2026</span>
+        <span class="meta-separator">·</span>
+        <span id="hero-hijri-date">-- Мухаррам 1448</span>
+      </div>
+      
+      <h1 class="hero-title">Пять моментов дня,<br>сверенных по солнцу</h1>
+      <p class="hero-desc">
+        Время намаза, направление киблы и чтение Корана — в одном месте, устроенном как астролябия: просто, точно, без лишнего.
+      </p>
+      
+      <!-- Sun Path Astrolabe Widget -->
+      <div class="astrolabe-widget">
+        <div class="astrolabe-arc-container">
+          <svg class="astrolabe-svg" viewBox="0 0 800 240" preserveAspectRatio="xMidYMid meet">
+            <!-- Sun Arc Path -->
+            <path id="sun-path-arc" d="M 50 200 A 350 220 0 0 1 750 200" fill="none" stroke="var(--color-gold-opacity)" stroke-width="1.5" stroke-dasharray="6,6"/>
+            
+            <!-- Prayer Time Dots and Labels -->
+            <!-- Fajr -->
+            <circle class="prayer-dot" id="dot-fajr" cx="95" cy="155" r="5" />
+            
+            <!-- Dhuhr -->
+            <circle class="prayer-dot" id="dot-dhuhr" cx="300" cy="50" r="5" />
+            
+            <!-- Asr -->
+            <circle class="prayer-dot" id="dot-asr" cx="400" cy="40" r="5" />
+            
+            <!-- Maghrib -->
+            <circle class="prayer-dot" id="dot-maghrib" cx="500" cy="50" r="5" />
+            
+            <!-- Isha -->
+            <circle class="prayer-dot" id="dot-isha" cx="705" cy="155" r="5" />
+            
+            <!-- Dynamic Glowing Sun -->
+            <circle id="dynamic-sun" cx="400" cy="40" r="8" fill="var(--color-gold)" filter="url(#sun-glow)" />
+            
+            <!-- Glow Filter -->
+            <defs>
+              <filter id="sun-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+          </svg>
+          
+          <!-- Absolute Text Labels on Arc -->
+          <div class="arc-label" style="left: 12%; top: 68%;">
+            <span class="arc-time" id="arc-time-fajr">04:12</span>
+            <span class="arc-name">ФАДЖР</span>
+          </div>
+          <div class="arc-label" style="left: 36%; top: 25%;">
+            <span class="arc-time" id="arc-time-dhuhr">12:41</span>
+            <span class="arc-name">ЗУХР</span>
+          </div>
+          <div class="arc-label" style="left: 50%; top: 12%; transform: translate(-50%, -50%);">
+            <div class="active-sun-label">
+              <span class="arc-name-active" id="active-prayer-name">АСР · СЕЙЧАС</span>
+              <span class="arc-time-active" id="arc-time-current">16:24</span>
+            </div>
+          </div>
+          <div class="arc-label" style="left: 64%; top: 25%;">
+            <span class="arc-time" id="arc-time-maghrib">19:47</span>
+            <span class="arc-name">МАГРИБ</span>
+          </div>
+          <div class="arc-label" style="left: 88%; top: 68%;">
+            <span class="arc-time" id="arc-time-isha">21:18</span>
+            <span class="arc-name">ИША</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Countdown Banner -->
+      <div class="countdown-card">
+        <span class="countdown-title" id="countdown-label">ДО НАМАЗА МАГРИБ</span>
+        <h2 class="countdown-timer" id="countdown-timer-text">03:22:47</h2>
+        <div class="countdown-subtext" id="countdown-status-text">
+          Аср завершён - 16:24 <span class="subtext-separator">|</span> Заход солнца - 19:47
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRAYER TIMES SECTION -->
+  <section id="prayer-section" class="section prayer-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-subtitle">✦ РАСПИСАНИЕ НАМАЗА</span>
+        <h2 class="section-title">Точное время для вашего города</h2>
+        <p class="section-desc">
+          Расчёт по геолокации с выбором исламского метода расчета и ручной корректировкой в минутах для каждого намаза.
+        </p>
+      </div>
+      
+      <!-- Dual Panel Card -->
+      <div class="prayer-card-container">
+        <!-- Left Panel: City Info -->
+        <div class="prayer-left-panel">
+          <div class="panel-header">
+            <span class="panel-hijri" id="panel-hijri-date">25 Мухаррам 1448 г.х.</span>
+            <h3 class="panel-city" id="panel-city-name">Душанбе</h3>
+            <span class="panel-gregorian" id="panel-gregorian-date">Суббота, 11 июля 2026</span>
+          </div>
+          
+          <!-- Small Dial Visual -->
+          <div class="panel-dial-wrapper">
+            <div class="panel-dial">
+              <div class="dial-center-dot"></div>
+              <div class="dial-arrow" id="panel-dial-arrow"></div>
+              <!-- Mini markings -->
+              <div class="dial-mark mark-n">C</div>
+              <div class="dial-mark mark-e">В</div>
+              <div class="dial-mark mark-s">Ю</div>
+              <div class="dial-mark mark-w">З</div>
+            </div>
+          </div>
+          
+          <div class="panel-action">
+            <button class="btn btn-panel" id="panel-qibla-btn">
+              <span><svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px; margin-top:-2px;"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>Кибла: <span id="qibla-angle-btn">244°</span> · <span id="qibla-dist-btn">3 412 км</span> до Каабы</span>
+            </button>
+            <button class="btn btn-secondary-emerald" id="change-city-btn" style="margin-top: 10px; width: 100%;">
+              Изменить город...
+            </button>
+          </div>
+        </div>
+        
+        <!-- Right Panel: Timings Table -->
+        <div class="prayer-right-panel">
+          <ul class="prayer-list">
+            <li class="prayer-item" id="item-fajr">
+              <span class="prayer-name-ru">Фаджр</span>
+              <span class="prayer-name-ar">الفجر</span>
+              <span class="prayer-time-val" id="time-fajr">04:12</span>
+            </li>
+            <li class="prayer-item" id="item-sunrise">
+              <span class="prayer-name-ru">Восход</span>
+              <span class="prayer-name-ar">Шурук</span>
+              <span class="prayer-time-val" id="time-sunrise">05:48</span>
+            </li>
+            <li class="prayer-item" id="item-dhuhr">
+              <span class="prayer-name-ru">Зухр</span>
+              <span class="prayer-name-ar">الظهر</span>
+              <span class="prayer-time-val" id="time-dhuhr">12:41</span>
+            </li>
+            <li class="prayer-item active-prayer" id="item-asr">
+              <span class="prayer-name-ru">Аср</span>
+              <span class="prayer-name-ar">العصر</span>
+              <span class="prayer-time-val" id="time-asr">16:24</span>
+            </li>
+            <li class="prayer-item" id="item-maghrib">
+              <span class="prayer-name-ru">Магриб</span>
+              <span class="prayer-name-ar">المغرب</span>
+              <span class="prayer-time-val" id="time-maghrib">19:47</span>
+            </li>
+            <li class="prayer-item" id="item-isha">
+              <span class="prayer-name-ru">Иша</span>
+              <span class="prayer-name-ar">العشاء</span>
+              <span class="prayer-time-val" id="time-isha">21:18</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QIBLA COMPASS SECTION -->
+  <section id="qibla-section" class="section qibla-section">
+    <div class="container qibla-grid">
+      <!-- Left side text & metrics -->
+      <div class="qibla-text-side">
+        <span class="section-subtitle">✦ НАПРАВЛЕНИЕ КИБЛЫ</span>
+        <h2 class="section-title">Компас, откалиброванный по вашей точке на карте</h2>
+        <p class="section-desc">
+          Используем магнитометр устройства и данные геолокации, чтобы стрелка всегда указывала точно на Каабу — с учётом магнитного склонения.
+        </p>
+        
+        <div class="qibla-metrics">
+          <div class="metric-item">
+            <span class="metric-val" id="qibla-val-angle">244°</span>
+            <span class="metric-label">азимут от севера</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-val" id="qibla-val-distance">3 412 км</span>
+            <span class="metric-label">до Мекки</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-val">±0.2°</span>
+            <span class="metric-label">точность расчета</span>
+          </div>
+        </div>
+        
+        <!-- Button to request permission for sensors on iOS -->
+        <button class="btn btn-primary" id="enable-compass-btn" style="margin-top: 30px; display: none;">
+          Калибровать компас (разрешить датчики)
+        </button>
+      </div>
+      
+      <!-- Right side compass visual -->
+      <div class="qibla-visual-side">
+        <div class="compass-container">
+          <div class="compass-dial" id="compass-dial-element">
+            <span class="compass-direction dir-n">С</span>
+            <span class="compass-direction dir-e">В</span>
+            <span class="compass-direction dir-s">Ю</span>
+            <span class="compass-direction dir-w">З</span>
+            
+            <!-- Decorative circle rings inside compass -->
+            <div class="compass-inner-ring-1"></div>
+            <div class="compass-inner-ring-2"></div>
+            
+            <!-- Needle -->
+            <div class="compass-needle" id="compass-needle-element"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Collapsible Map Container for fallback visual representation -->
+    <div class="container map-outer-container">
+      <div class="map-header">
+        <h3 class="map-title">Резервная карта направления Киблы</h3>
+        <p class="map-desc">Показывает прямую линию (ортодромию) от вашего местоположения до Каабы в Мекке.</p>
+      </div>
+      <div id="qibla-map" class="qibla-map-canvas"></div>
+    </div>
+  </section>
+
+  <!-- QURAN READER SECTION -->
+  <section id="quran-section" class="section quran-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-subtitle">✦ ЧТЕНИЕ КОРАНА</span>
+        <h2 class="section-title">604 страницы мусхафа, с переводом и закладками</h2>
+        <p class="section-desc">
+          Арабский текст, подстрочный перевод, аудиочтение и автосохранение места — открывается там, где вы остановились в прошлый раз.
+        </p>
+      </div>
+      
+      <!-- Quran Reader Layout -->
+      <div class="quran-reader-container">
+        <!-- Sidebar: Surah List -->
+        <div class="quran-sidebar">
+          <div class="sidebar-search-box">
+            <input type="text" id="surah-search-input" placeholder="Поиск суры...">
+          </div>
+          <ul class="surah-list" id="surah-list-ul">
+            <!-- Dynamically populated -->
+          </ul>
+        </div>
+        
+        <!-- Content Panel: Surah Text -->
+        <div class="quran-content-panel">
+          <div class="quran-content-header">
+            <div class="content-header-title">
+              <h3 id="current-surah-title">Аль-Фатиха · аяты 1–7</h3>
+              <span id="current-surah-title-ar" class="arabic-text-title">الفاتحة</span>
+            </div>
+            
+            <!-- Controls: Font Size and Audio -->
+            <div class="quran-controls">
+              <div class="font-size-adjust">
+                <span class="font-control-label">Размер текста:</span>
+                <input type="range" id="quran-font-range" min="16" max="42" value="28">
+              </div>
+              
+              <!-- Reciter selector -->
+              <select id="reciter-select" class="reciter-select">
+                <option value="ar.alafasy">Мишари Рашид Аль-Афаси</option>
+                <option value="ar.abdulbasitmujawwad">Абдул Басит (Муджаввад)</option>
+                <option value="ar.minshawi">Мухаммад Сиддик аль-Миншави</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Bismillah banner -->
+          <div class="bismillah-banner" id="bismillah-banner">
+            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+          </div>
+          
+          <!-- Verses Container -->
+          <div class="verses-container" id="verses-container">
+            <!-- Dynamically populated -->
+          </div>
+          
+          <!-- Floating Audio Player Bar at bottom of reading panel -->
+          <div class="quran-audio-player-bar">
+            <button class="player-btn btn-play" id="audio-play-pause-btn" aria-label="Воспроизвести аудио">
+              <span id="play-icon-sym">▶</span>
+            </button>
+            
+            <div class="audio-progress-container">
+              <span class="audio-time" id="audio-current-time">0:00</span>
+              <div class="audio-progress-bar-wrapper">
+                <div class="audio-progress-bar" id="audio-progress-bar-fill" style="width: 0%;"></div>
+              </div>
+              <span class="audio-time" id="audio-total-time">0:00</span>
+            </div>
+            
+            <div class="audio-now-playing" id="audio-status-label">
+              Аудио: Выключено
+            </div>
+            
+            <!-- Hidden Audio Element -->
+            <audio id="quran-audio-element" preload="none"></audio>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NAMAZ LEARNING SECTION -->
+  <section id="learning-section" class="section learning-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-subtitle">✦ ОБУЧЕНИЕ НАМАЗУ</span>
+        <h2 class="section-title">Пошаговое руководство для начинающих</h2>
+        <p class="section-desc">
+          Простые шаги для тех, кто учится совершать молитву или брать омовение. Выберите нужный режим и пол.
+        </p>
+      </div>
+
+      <!-- Controls and Tabs -->
+      <div class="learning-controls">
+        <div class="learning-tabs-mode">
+          <button class="btn btn-tab active" id="learn-mode-namaz">Совершение намаза</button>
+          <button class="btn btn-tab" id="learn-mode-wudu">Омовение (Вуду)</button>
+        </div>
+        
+        <div class="learning-tabs-gender" id="learning-gender-wrapper">
+          <button class="btn btn-gender-tab active" id="learn-gender-male">Мужчины</button>
+          <button class="btn btn-gender-tab" id="learn-gender-female">Женщины</button>
+        </div>
+      </div>
+
+      <!-- Learning Card Container -->
+      <div class="learning-card">
+        <!-- Progress Bar and Index -->
+        <div class="learning-card-header">
+          <span class="learning-step-indicator" id="learn-step-indicator">Шаг 1 из 9</span>
+          <div class="learning-progress-track">
+            <div class="learning-progress-fill" id="learn-progress-fill" style="width: 11.1%;"></div>
+          </div>
+        </div>
+
+        <!-- Dynamic Content Body -->
+        <div class="learning-card-body" id="learn-card-body-content">
+          <div class="learning-main-content">
+            <h3 class="learning-step-title" id="learn-step-title">Намерение (Ният)</h3>
+            <p class="learning-step-instruction" id="learn-step-desc">
+              Встаньте лицом к Кибле. Руки опущены вдоль тела. Сделайте мысленное намерение совершить конкретную молитву (например, утренний намаз Фаджр).
+            </p>
+            
+            <!-- Recitation box -->
+            <div class="learning-recitation-box" id="learn-recitation-box">
+              <div class="learning-arabic" id="learn-rec-arabic">نَوَيْتُ أَنْ أُصَلِّيَ فَرْضَ صَلَاةِ الْفَجْرِ</div>
+              <div class="learning-transcription">
+                <strong>Транскрипция:</strong> <span id="learn-rec-trans">Навайту ан усаллийа фарда салятиль-фаджри...</span>
+              </div>
+              <div class="learning-translation">
+                <strong>Перевод смысла:</strong> <span id="learn-rec-trans-ru">«Я намереваюсь совершить обязательную утреннюю молитву...»</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="learning-card-footer">
+          <button class="btn btn-nav-arrow" id="learn-prev-btn" disabled>← Назад</button>
+          <button class="btn btn-nav-arrow" id="learn-next-btn">Вперед →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OTHER TOOLS SECTION -->
+  <section id="tools-section" class="section tools-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-subtitle">✦ ОСТАЛЬНЫЕ ИНСТРУМЕНТЫ</span>
+        <h2 class="section-title">Всё, что нужно в течение дня</h2>
+      </div>
+      
+      <!-- Grid of Cards -->
+      <div class="tools-grid">
+        <div class="tool-card" id="tool-compass-link">
+          <div class="tool-icon-wrapper">
+            <svg class="tool-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+            </svg>
+          </div>
+          <h3 class="tool-title">Интерактивный компас</h3>
+          <p class="tool-desc">
+            Определение направления на Каабу по вашим координатам с телефона.
+          </p>
+        </div>
+        
+        <div class="tool-card" id="tool-hijri-link">
+          <div class="tool-icon-wrapper">
+            <svg class="tool-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <h3 class="tool-title">Календарь Хиджры</h3>
+          <p class="tool-desc">
+            Отображение текущего лунного исламского календаря.
+          </p>
+        </div>
+        
+        <div class="tool-card" id="tool-theme-toggle">
+          <div class="tool-icon-wrapper">
+            <svg class="tool-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </div>
+          <h3 class="tool-title">Ночной режим</h3>
+          <p class="tool-desc">
+            Переключайте цветовую схему сайта в один клик.
+          </p>
+        </div>
+        
+        <div class="tool-card" id="tool-shariah-config">
+          <div class="tool-icon-wrapper">
+            <svg class="tool-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </div>
+          <h3 class="tool-title">Расчет шариата</h3>
+          <p class="tool-desc">
+            Настройка углов солнца и мазхаба для молитв.
+          </p>
+        </div>
+      </div>
+      
+      <!-- Emerald Banner at Bottom -->
+      <div class="emerald-banner">
+        <div class="banner-arabic-text">
+          رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ
+        </div>
+        <div class="banner-translation-text">
+          «Господь наш! Одари нас добром в этом мире и добром в Последней жизни и защити нас от мучений в Огне».
+        </div>
+        <button class="btn btn-secondary-gold" id="dua-banner-btn">Подробнее о дуа</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODALS FOR CITY CHANGE AND SETTINGS -->
+  <div class="modal-overlay" id="city-modal">
+    <div class="modal-card">
+      <button class="modal-close" id="city-modal-close">&times;</button>
+      <h3 class="modal-title">Выбор города вручную</h3>
+      <p class="modal-desc">Введите название города на русском или английском языке для расчета времени намазов.</p>
+      
+      <div class="modal-input-group">
+        <input type="text" id="city-search-input" placeholder="Например: Москва, Казань, Душанбе...">
+        <button class="btn btn-primary" id="city-search-submit">Найти</button>
+      </div>
+      
+      <div id="city-search-results" class="search-results-list"></div>
+      
+      <div class="modal-actions-note">
+        Или нажмите <a href="#" id="use-gps-link">использовать геолокацию устройства</a>.
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-card">
+      <button class="modal-close" id="settings-modal-close">&times;</button>
+      <h3 class="modal-title">Настройки исламских расчетов</h3>
+      <p class="modal-desc">Выберите стандарт расчета времени для намазов Фаджр и Иша, а также метод вычисления Асра.</p>
+      
+      <div class="settings-form-group">
+        <label for="calculation-method-select">Метод расчета углов:</label>
+        <select id="calculation-method-select">
+          <option value="3">Исламское общество Северной Америки (ISNA) - 15°</option>
+          <option value="1">Университет исламских наук, Карачи - 18°</option>
+          <option value="2">Исламский исследовательский институт Египта - 19.5° / 17.5°</option>
+          <option value="4">Университет Умм аль-Кура (Мекка) - 18.5°</option>
+          <option value="5">Всемирная мусульманская лига (MWL) - 18° / 17°</option>
+          <option value="13">ДУМ Республики Татарстан (Казань) - 18° / 15°</option>
+          <option value="14">Духовное Управление Мусульман РФ (Москва) - 16° / 15°</option>
+        </select>
+      </div>
+      
+      <div class="settings-form-group">
+        <label for="asr-method-select">Метод расчета Асра (Мазхаб):</label>
+        <select id="asr-method-select">
+          <option value="0">Стандартный (Шафии, Малики, Ханбали)</option>
+          <option value="1">Ханафитский мазхаб (длина тени х2)</option>
+        </select>
+      </div>
+      
+      <button class="btn btn-primary" id="save-settings-btn" style="width: 100%; margin-top: 15px;">Применить настройки</button>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <div class="logo">
+          <span class="logo-icon" style="color: var(--color-gold);">✨</span>
+          <span class="logo-text" style="color: #fff;">Мазхаб.</span>
+        </div>
+        <p class="footer-about">
+          Современные инструменты для мусульман в минималистичном дизайне. Проект создан для удобства верующих по всему миру.
+        </p>
+        <div class="footer-copyright">
+          © 2026 Мазхаб. Все права защищены.
+        </div>
+      </div>
+      
+      <div class="footer-links-col">
+        <h4>Сервисы</h4>
+        <ul>
+          <li><a href="#prayer-section">Время намаза</a></li>
+          <li><a href="#qibla-section">Компас Киблы</a></li>
+          <li><a href="#quran-section">Чтение Корана</a></li>
+          <li><a href="#learning-section">Обучение намазу</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-links-col">
+        <h4>Источники данных</h4>
+        <ul>
+          <li><a href="https://aladhan.com/prayer-times-api" target="_blank" rel="noopener">Aladhan Prayer Times API</a></li>
+          <li><a href="https://alquran.cloud" target="_blank" rel="noopener">Al Quran Cloud API</a></li>
+          <li><a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet Maps Engine</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-links-col">
+        <h4>Контакты</h4>
+        <p class="footer-contact-info">
+          Email: info@mazhab.portal<br>
+          Telegram: @mazhab_support
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Leaflet.js script for Map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Custom Logic Script -->
+  <script src="app.js"></script>
+</body>
+</html>
